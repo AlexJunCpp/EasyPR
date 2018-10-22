@@ -143,6 +143,18 @@ void getLBPFeatures(const Mat& image, Mat& features) {
 }
 
 Mat charFeatures(Mat in, int sizeData) {
+    //*leijun
+    //通过神经网络对字符图块进行判别，首先需要获取字符图块的特征，字符特征的获取，主要通过
+    //charFeatures 函数来实现。
+    //
+    //对于中文字符和英文字符，默认的图块大小是不一样的，中文字符默认是
+    //20*20，非中文默认是10*10。
+    //
+    //GetCenterRect
+    //函数主要用于获取字符的边框，分别查找从四个角落查找字符的位置；
+    //CutTheRect
+    //函数裁剪原图，即将字符移动到图像的中间位置，通过这一步的操作，可将字符识别的准确率提高5%左右；
+    //ProjectedHistogram 函数用于获取归一化序列，归一化到0-1区间范围内
   const int VERTICAL = 0;
   const int HORIZONTAL = 1;
 
@@ -158,6 +170,9 @@ Mat charFeatures(Mat in, int sizeData) {
   // Histogram features
   Mat vhist = ProjectedHistogram(lowData, VERTICAL);
   Mat hhist = ProjectedHistogram(lowData, HORIZONTAL);
+  //*leijun
+  //通过上述代码可知，非中文字符和中文字符获得的字符特征个数是不同的，非中文字符features个数为
+  //10+10+10*10=120，中文字符features个数为  20+20+20*20=440。
 
   // Last 10 is the number of moments components
   int numCols = vhist.cols + hhist.cols + lowData.cols * lowData.cols;

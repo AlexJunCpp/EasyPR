@@ -1,0 +1,7 @@
+/Users/junlei/Documents/GitHub/EasyPR/build/CMakeFiles/rebuild_cache.dir
+/Users/junlei/Documents/GitHub/EasyPR/build/CMakeFiles/edit_cache.dir
+/Users/junlei/Documents/GitHub/EasyPR/build/CMakeFiles/demo.dir
+/Users/junlei/Documents/GitHub/EasyPR/build/CMakeFiles/easypr.dir
+/Users/junlei/Documents/GitHub/EasyPR/build/thirdparty/CMakeFiles/rebuild_cache.dir
+/Users/junlei/Documents/GitHub/EasyPR/build/thirdparty/CMakeFiles/edit_cache.dir
+/Users/junlei/Documents/GitHub/EasyPR/build/thirdparty/CMakeFiles/thirdparty.dir

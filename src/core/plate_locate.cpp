@@ -158,6 +158,20 @@ int CPlateLocate::colorSearch(const Mat &src, const Color r, Mat &out,
 
 int CPlateLocate::sobelFrtSearch(const Mat &src,
                                  vector<Rect_<float>> &outRects) {
+    //*leijun sobelFrtSearch()函数中通过 sobelOper()
+    //进行sobel定位，主要步骤如下：
+    //
+    //1、对图像进行高斯滤波，为Sobel算子计算去除干扰噪声；
+    //
+    //2、图像灰度化，提高运算速度；
+    //
+    //3、对图像进行Sobel运算，得到图像的一阶水平方向导数；
+    //
+    //4、通过otsu进行阈值分割；
+    //
+    //5、通过形态学闭操作，连接车牌区域。
+    //
+    //此处通过Sobel算子进行车牌定位，仅仅做水平方向求导，而不做垂直方向求导。这样做的意义是，如果做了垂直方向求导，会检测出很多水平边缘。水平边缘多也许有利于生成更精确的轮廓，但是由于有些车子前端太多的水平边缘了，例如车头排气孔，标志等等，很多的水平边缘会误导我们的连接结果，导致我们得不到一个恰好的车牌位置。 
   Mat src_threshold;
 
   sobelOper(src, src_threshold, m_GaussianBlurSize, m_MorphSizeWidth,
@@ -168,6 +182,9 @@ int CPlateLocate::sobelFrtSearch(const Mat &src,
                contours,               // a vector of contours
                CV_RETR_EXTERNAL,
                CV_CHAIN_APPROX_NONE);  // all pixels of each contours
+  //*leijun
+  //对图像轮廓进行搜索，轮廓搜索将全图的轮廓都搜索出来了，需要进行筛选，对轮廓求最小外接矩形，并在
+  //verifySizes() 中进行验证，不满足条件的删除。
 
   vector<vector<Point>>::iterator itc = contours.begin();
 
@@ -175,9 +192,11 @@ int CPlateLocate::sobelFrtSearch(const Mat &src,
 
   while (itc != contours.end()) {
     RotatedRect mr = minAreaRect(Mat(*itc));
+    //*leijun  最小外接矩形
 
 
     if (verifySizes(mr)) {
+        //* 验证size大小
       first_rects.push_back(mr);
 
       float area = mr.size.height * mr.size.width;
@@ -310,10 +329,12 @@ int CPlateLocate::sobelOper(const Mat &in, Mat &out, int blurSize, int morphW,
   Mat mat_blur;
   mat_blur = in.clone();
   GaussianBlur(in, mat_blur, Size(blurSize, blurSize), 0, 0, BORDER_DEFAULT);
+  //*leijun  高斯模糊处理噪声，为后面灰度化后进行sobel算子提供有利条件
 
   Mat mat_gray;
   if (mat_blur.channels() == 3)
     cvtColor(mat_blur, mat_gray, CV_RGB2GRAY);
+  //*leijun 灰度化，提高运算速度
   else
     mat_gray = mat_blur;
 
@@ -326,6 +347,7 @@ int CPlateLocate::sobelOper(const Mat &in, Mat &out, int blurSize, int morphW,
 
 
   Sobel(mat_gray, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT);
+  //*leijun  sobel算法
   convertScaleAbs(grad_x, abs_grad_x);
 
   Mat grad;
@@ -420,6 +442,8 @@ void deleteNotArea(Mat &inmat, Color color = UNKNOWN) {
 int CPlateLocate::deskew(const Mat &src, const Mat &src_b,
                          vector<RotatedRect> &inRects,
                          vector<CPlate> &outPlates, bool useDeteleArea, Color color) {
+    //*leijun  https://www.cnblogs.com/freedomker/p/7250997.html
+    //
   Mat mat_debug;
   src.copyTo(mat_debug);
 
@@ -468,6 +492,7 @@ int CPlateLocate::deskew(const Mat &src, const Mat &src_b,
       if ((roi_angle - 5 < 0 && roi_angle + 5 > 0) || 90.0 == roi_angle ||
           -90.0 == roi_angle) {
         deskew_mat = bound_mat;
+        //*leijun 直接输出
       } else {
         Mat rotated_mat;
         Mat rotated_mat_b;
@@ -476,6 +501,7 @@ int CPlateLocate::deskew(const Mat &src, const Mat &src_b,
           continue;
 
         if (!rotation(bound_mat_b, rotated_mat_b, roi_rect_size, roi_ref_center, roi_angle))
+            //*leijun  rotation()函数主要用于对倾斜的图片进行旋转
           continue;
 
         // we need affine for rotatioed image
@@ -483,7 +509,10 @@ int CPlateLocate::deskew(const Mat &src, const Mat &src_b,
         // imshow("1roated_mat",rotated_mat);
         // imshow("rotated_mat_b",rotated_mat_b);
         if (isdeflection(rotated_mat_b, roi_angle, roi_slope)) {
+            //*leijun 函数 isdeflection()
+            //的主要功能是判断车牌偏斜的程度，并且计算偏斜的值
           affine(rotated_mat, deskew_mat, roi_slope);
+          //*leijun 偏斜校正
         } else
           deskew_mat = rotated_mat;
       }
@@ -498,6 +527,8 @@ int CPlateLocate::deskew(const Mat &src, const Mat &src_b,
       if (deskew_mat.cols * 1.0 / deskew_mat.rows > 2.3 && deskew_mat.cols * 1.0 / deskew_mat.rows < 6) {
         if (deskew_mat.cols >= WIDTH || deskew_mat.rows >= HEIGHT)
           resize(deskew_mat, plate_mat, plate_mat.size(), 0, 0, INTER_AREA);
+        //*leijun 最后使用 resize 函数将车牌区域统一化为 EasyPR
+        //的车牌大小，大小为136*36。
         else
           resize(deskew_mat, plate_mat, plate_mat.size(), 0, 0, INTER_CUBIC);
 
@@ -542,6 +573,9 @@ bool CPlateLocate::rotation(Mat &in, Mat &out, const Size rect_size,
   Point2f new_center(in_large.cols / 2.f, in_large.rows / 2.f);
 
   Mat rot_mat = getRotationMatrix2D(new_center, angle, 1);
+  //*leijun
+  //在旋转的过程当中，遇到一个问题，就是旋转后的图像被截断了.getRotationMatrix2D()
+  //函数主要根据旋转中心和角度进行旋转，当旋转角度还小时，一切都还好，但当角度变大时，明显我们看到的外接矩形的大小也在扩增。在这里，外接矩形被称为视框，也就是我需要旋转的正方形所需要的最小区域。随着旋转角度的变大，视框明显增大。 
 
   /*imshow("in_copy", in_large);
   waitKey(0);*/
@@ -695,6 +729,8 @@ void CPlateLocate::affine(const Mat &in, Mat &out, const double slope) {
 
 int CPlateLocate::plateColorLocate(Mat src, vector<CPlate> &candPlates,
                                    int index) {
+    //*leijun H 分量是 HSV 模型中唯一跟颜色本质相关的分量。 只要固定了 H 的值，
+    //并且保持 S 和 V 分量不太小，那么表现的颜色就会基本固定
   vector<RotatedRect> rects_color_blue;
   rects_color_blue.reserve(64);
   vector<RotatedRect> rects_color_yellow;
@@ -714,7 +750,14 @@ int CPlateLocate::plateColorLocate(Mat src, vector<CPlate> &candPlates,
 #pragma omp section
     {
       colorSearch(src, BLUE, src_b_blue, rects_color_blue);
+      //*leijun
+      //colorSearch()主要是根据上文介绍的HSV模型，进行相关颜色定位，然后依据常见的图像处理方法进行处理，例如阈值分割，形态学处理和轮廓查找等
+      //colorMatch()函数比较复杂，读者可以简单理解为用inRange函数对图像hsv空间进行处理，得到颜色过滤后的图像。(其实colotMatch函数中对hsv模型中的s和v根据h的值进行自适应变化)，进行阈值分割后，采用了形态学图像处理，内核为一个
+      //10X2矩形，需要注意的是，内核的大小对最终的结果有很大的影响。对寻找到的轮廓，先进性尺寸验证，不符合尺寸的轮廓直接去除。尺寸验证调用函数
+      //verifySizes()
+      //。尺寸验证函数主要是对轮廓的长度和宽度，还有长宽比做了限制，以过滤掉大部分的明显非车牌的轮廓区域。
       deskew(src, src_b_blue, rects_color_blue, plates_blue, true, BLUE);
+      //*leijun  偏斜扭转
     }
 #pragma omp section
     {
@@ -849,11 +892,13 @@ int CPlateLocate::sobelOperT(const Mat &in, Mat &out, int blurSize, int morphW,
   Mat mat_threshold;
   double otsu_thresh_val =
       threshold(grad, mat_threshold, 0, 255, CV_THRESH_OTSU + CV_THRESH_BINARY);
+  //*leijun 阈值分割
 
   utils::imwrite("resources/image/tmp/grayBINARY.jpg", mat_threshold);
 
   Mat element = getStructuringElement(MORPH_RECT, Size(morphW, morphH));
   morphologyEx(mat_threshold, mat_threshold, MORPH_CLOSE, element);
+  //*leijun 形态学闭操作
 
   utils::imwrite("resources/image/tmp/phologyEx.jpg", mat_threshold);
 
@@ -874,6 +919,19 @@ int CPlateLocate::plateSobelLocate(Mat src, vector<CPlate> &candPlates,
   bound_rects.reserve(256);
 
   sobelFrtSearch(src, bound_rects);
+  //*leijun sobelFrtSearch()函数中通过 sobelOper() 进行sobel定位，主要步骤如下：
+  //
+  //1、对图像进行高斯滤波，为Sobel算子计算去除干扰噪声；
+  //
+  //2、图像灰度化，提高运算速度；
+  //
+  //3、对图像进行Sobel运算，得到图像的一阶水平方向导数；
+  //
+  //4、通过otsu进行阈值分割；
+  //
+  //5、通过形态学闭操作，连接车牌区域。
+  //
+  //此处通过Sobel算子进行车牌定位，仅仅做水平方向求导，而不做垂直方向求导。这样做的意义是，如果做了垂直方向求导，会检测出很多水平边缘。水平边缘多也许有利于生成更精确的轮廓，但是由于有些车子前端太多的水平边缘了，例如车头排气孔，标志等等，很多的水平边缘会误导我们的连接结果，导致我们得不到一个恰好的车牌位置。 
 
   vector<Rect_<float>> bound_rects_part;
   bound_rects_part.reserve(256);
@@ -920,6 +978,12 @@ int CPlateLocate::plateSobelLocate(Mat src, vector<CPlate> &candPlates,
     vector<RotatedRect> rects_sobel;
     rects_sobel.reserve(128);
     sobelSecSearchPart(bound_mat, refpoint, rects_sobel);
+    //*leijun
+    //为了进一步提高搜索的准确性，EasyPR里面对第一次搜索出的矩形扩大一定范围后，进行了二次搜素，具体函数为
+    //sobelSecSearchPart() 。sobelSecSearchPart() 函数和 sobelFrtSearch()
+    //大致过程是类似的，此处不再详细叙述，唯一的不同是sobelSecSearchPart()
+    //对车牌上铆钉的去除进行了对应的处理。之后对定位区域进行偏斜扭转
+    //deskew()处理之后，即可得到车牌定位的结果。
 
 #pragma omp critical
     {
@@ -957,6 +1021,14 @@ int CPlateLocate::plateSobelLocate(Mat src, vector<CPlate> &candPlates,
   sobelOper(src, src_b, 3, 10, 3);
 
   deskew(src, src_b, rects_sobel_all, plates);
+  //*leijun 偏斜扭转 `
+  //通过颜色定位和Sobel算子定位可以计算出一个个的矩形区域，这些区域都是潜在车牌区域，但是在进行SVM判别是否是车牌之前，还需要进行一定的处理。主要是考虑到以下几个问题：
+  //
+  //1、定位区域存在一定程度的倾斜，需要旋转到正常视角；
+  //
+  //2、定位区域存在偏斜，除了进行旋转之后，还需要进行仿射变换；
+  //
+  //3、定位出区域的大小不一致，需要对车牌的尺寸进行统一。
 
   //for (size_t i = 0; i < plates.size(); i++) 
   //  candPlates.push_back(plates[i]);

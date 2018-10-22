@@ -19,6 +19,7 @@ namespace easypr {
     if (useLBP) {
       LOAD_SVM_MODEL(svm_, kLBPSvmPath);
       extractFeature = getLBPFeatures;
+      //*leijun 获得rois的LBP特征
     }
     else {
       LOAD_SVM_MODEL(svm_, kHistSvmPath);

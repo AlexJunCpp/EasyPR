@@ -282,6 +282,8 @@ bool slideChineseGrayWindow(const Mat& image, Rect& mr, Mat& newRoi, Color plate
 }
 
 
+//*leijun
+//我们已经可以从图像中定位出车牌区域，并且通过SVM模型删除“虚假”车牌，下面我们需要对车牌检测步骤中获取到的车牌图像，进行光学字符识别（OCR），在进行光学字符识别之前，需要对车牌图块进行灰度化，二值化，然后使用一系列算法获取到车牌的每个字符的分割图块。
 int CCharsSegment::charsSegment(Mat input, vector<Mat>& resultVec, Color color) {
   if (!input.data) return 0x01;
 
@@ -300,6 +302,8 @@ int CCharsSegment::charsSegment(Mat input, vector<Mat>& resultVec, Color color) 
 
   img_threshold = input_grey.clone();
   spatial_ostu(img_threshold, 8, 2, plateType);
+  //*leijun
+  //空间otsu算法，主要用于处理光照不均匀的图像，对于当前图像，分块分别进行二值化；
 
   if (0) {
     imshow("plate", img_threshold);
@@ -310,6 +314,8 @@ int CCharsSegment::charsSegment(Mat input, vector<Mat>& resultVec, Color color) 
   // remove liuding and hor lines
   // also judge weather is plate use jump count
   if (!clearLiuDing(img_threshold)) return 0x02;
+  //*leijun
+  //处理车牌上铆钉和水平线，因为铆钉和字符连在一起，会影响后面识别的精度。此处有一个特别的乌龙事件，就是铆钉的读音应该是maoding，不读liuding；
 
   Mat img_contours;
   img_threshold.copyTo(img_contours);
@@ -329,6 +335,8 @@ int CCharsSegment::charsSegment(Mat input, vector<Mat>& resultVec, Color color) 
 
     if (verifyCharSizes(auxRoi)) vecRect.push_back(mr);
     ++itc;
+    //*leijun 字符大小验证
+    //主要是从面积，长宽比和字符的宽度高度等角度进行字符校验。
   }
 
 
@@ -341,10 +349,14 @@ int CCharsSegment::charsSegment(Mat input, vector<Mat>& resultVec, Color color) 
   size_t specIndex = 0;
 
   specIndex = GetSpecificRect(sortedRect);
+  //*leijun 获取特殊字符的位置，主要是车牌中除汉字外的第一个字符，一般位于车牌的
+  //1/7 ~ 2/7宽度处
+
 
   Rect chineseRect;
   if (specIndex < sortedRect.size())
     chineseRect = GetChineseRect(sortedRect[specIndex]);
+  //*leijun 获取汉字字符，一般为特殊字符左移字符宽度的1.15倍
   else
     return 0x04;
 
@@ -358,6 +370,7 @@ int CCharsSegment::charsSegment(Mat input, vector<Mat>& resultVec, Color color) 
   vector<Rect> newSortedRect;
   newSortedRect.push_back(chineseRect);
   RebuildRect(sortedRect, newSortedRect, specIndex);
+  //*leijun  从左到右取前7个字符，排除右边边界会出现误判的 I 
 
   if (newSortedRect.size() == 0) return 0x05;
 
@@ -377,6 +390,8 @@ int CCharsSegment::charsSegment(Mat input, vector<Mat>& resultVec, Color color) 
         float slideLengthRatio = 0.1f;
         //float slideLengthRatio = CParams::instance()->getParam1f();
         if (!slideChineseWindow(input_grey, mr, newRoi, plateType, slideLengthRatio, useAdapThreshold))
+            //*leijun
+            //改进中文字符的识别，在识别中文时，增加一个小型的滑动窗口，以此弥补通过省份字符直接查找中文字符时的定位不精等现象
           judgeChinese(auxRoi, newRoi, plateType);
       }
       else
@@ -397,6 +412,8 @@ int CCharsSegment::charsSegment(Mat input, vector<Mat>& resultVec, Color color) 
       }
 
       newRoi = preprocessChar(newRoi);
+      //*leijun 识别字符前预处理，主要是通过仿射变换，将字符的大小变换为20 *20；
+      //首先进行仿射变换，将字符统一大小，并归一化到中间，并resize为 20*20
     }
 
     if (0) {

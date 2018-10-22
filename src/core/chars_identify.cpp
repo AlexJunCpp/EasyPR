@@ -9,6 +9,10 @@ using namespace cv;
 
 namespace easypr {
 
+    //*leijun  字符识别主要是通过 类CharsIdentify
+    //来进行，对于中文字符和非中文字符，分别采取了不同的策略，训练得到的ANN模型也不一样，中文字符的识别主要使用
+    //identifyChinese 来处理，非中文字符的识别主要采用 identify
+    //来处理。另外，类CharsIdentify采用了单例模式
 CharsIdentify* CharsIdentify::instance_ = nullptr;
 
 CharsIdentify* CharsIdentify::instance() {
