@@ -49,10 +49,13 @@ class CPlateLocate {
   void affine(const Mat& in, Mat& out, const double slope);
 
   int plateColorLocate(Mat src, std::vector<CPlate>& candPlates, int index = 0);
+  //*leijun 用颜色来定位
   int plateSobelLocate(Mat src, std::vector<CPlate>& candPlates, int index = 0);
+  //*leijun 用垂直边缘信息来定位
   int sobelOperT(const Mat& in, Mat& out, int blurSize, int morphW, int morphH);
 
   int plateMserLocate(Mat src, std::vector<CPlate>& candPlates, int index = 0);
+  //*leijun 用最大极值稳定区域来定位
 
 
   int colorSearch(const Mat& src, const Color r, Mat& out,
