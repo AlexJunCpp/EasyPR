@@ -8,6 +8,7 @@ namespace demo {
 using namespace cv;
 using namespace std;
 
+//车牌定位主要是将图片中有可能是车牌的区域定位出来，方便后面进一步的处理。
 int test_plate_locate() {
   cout << "test_plate_locate" << endl;
 
@@ -16,6 +17,8 @@ int test_plate_locate() {
   cv::Mat src = imread(file);
 
   vector<cv::Mat> resultVec;
+  //CPlateLocate 是实现车牌定位的主要功能类， 其构造函数比较简单，主函数是
+  //plateLocate，用于定位车牌区域
   CPlateLocate plate;
   //plate.setDebug(0);
   //plate.setLifemode(true);

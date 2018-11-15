@@ -116,6 +116,7 @@ int CPlateLocate::colorSearch(const Mat &src, const Color r, Mat &out,
   const int color_morph_height = 2;
 
   colorMatch(src, match_grey, r, false);
+  //EasyPR中的colorMatch()函数比较复杂，读者可以简单理解为用inRange函数对图像hsv空间进行处理，得到颜色过滤后的图像。(其实colotMatch函数中对hsv模型中的s和v根据h的值进行自适应变化)，进行阈值分割后，采用了形态学图像处理，内核为一个 10X2矩形，需要注意的是，内核的大小对最终的结果有很大的影响。对寻找到的轮廓，先进性尺寸验证，不符合尺寸的轮廓直接去除。尺寸验证调用函数 verifySizes() 。尺寸验证函数主要是对轮廓的长度和宽度，还有长宽比做了限制，以过滤掉大部分的明显非车牌的轮廓区域。
   SHOW_IMAGE(match_grey, 0);
 
   Mat src_threshold;
@@ -745,6 +746,9 @@ int CPlateLocate::plateColorLocate(Mat src, vector<CPlate> &candPlates,
 
   Mat src_b_blue;
   Mat src_b_yellow;
+  //*leijun 这里为了加快计算机的计算速率，采用了OpenMP技术，OpenMP是由OpenMP
+  //Architecture Review
+  //Board牵头提出的，并已被广泛接受，用于共享内存并行系统的多处理器程序设计的一套指导性编译处理方案。通过并行计算，分别进行蓝色和黄色车牌的处理。
 #pragma omp parallel sections
   {
 #pragma omp section
@@ -1042,6 +1046,11 @@ int CPlateLocate::plateSobelLocate(Mat src, vector<CPlate> &candPlates,
 int CPlateLocate::plateLocate(Mat src, vector<Mat> &resultVec, int index) {
   vector<CPlate> all_result_Plates;
 
+  //1、颜色定位 plateColorLocate()；
+  //
+  //2、sobel算子定位 plateSobelLocate() ；
+  //
+  //3、MSER方法，即最大极值稳定区域方法 plateMserLocate()。
   plateColorLocate(src, all_result_Plates, index);
   plateSobelLocate(src, all_result_Plates, index);
   plateMserLocate(src, all_result_Plates, index);

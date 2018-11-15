@@ -25,5 +25,6 @@ class Kv {
 };
 
 }
+//leijun namespace的大括号不需要加；
 
 #endif // EASYPR_UTIL_KV_H_
