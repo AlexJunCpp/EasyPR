@@ -24,6 +24,8 @@ int test_plate_locate() {
   //plate.setLifemode(true);
 
   int result = plate.plateLocate(src, resultVec);
+  //?leijun 为啥函数实现中有三个参数，这里少了一个index？
+  //原因是在头文件platelocate.h中函数给定了参数默认值int = 0；
   if (result == 0) {
     size_t num = resultVec.size();
     for (size_t j = 0; j < num; j++) {
@@ -63,6 +65,7 @@ int test_plate_judge() {
   destroyWindow("plate_judge");
 
   int resultJu = PlateJudge::instance()->plateJudge(matVec, resultVec);
+  //如果通过judge，就加入resultVec中
 
   if (0 != resultJu) return -1;
 

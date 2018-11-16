@@ -4,6 +4,7 @@
 #include "easypr/core/params.h"
 
 namespace easypr {
+    //*leijun 命名空间声明和实现可以分离
 
   PlateJudge* PlateJudge::instance_ = nullptr;
 
@@ -40,6 +41,7 @@ namespace easypr {
   int PlateJudge::plateSetScore(CPlate& plate) {
     Mat features;
     extractFeature(plate.getPlateMat(), features);
+    //*leijun  获取特征·
     float score = svm_->predict(features, noArray(), cv::ml::StatModel::Flags::RAW_OUTPUT);
     //std::cout << "score:" << score << std::endl;
     if (0) {
@@ -89,6 +91,7 @@ namespace easypr {
         int w = inMat.cols;
         int h = inMat.rows;
         Mat tmpmat = inMat(Rect_<double>(w * 0.05, h * 0.1, w * 0.9, h * 0.8));
+        //*leijun 缩小范围，然后再检查一遍
         Mat tmpDes = inMat.clone();
         resize(tmpmat, tmpDes, Size(inMat.size()));
 
@@ -102,6 +105,7 @@ namespace easypr {
   // non-maximum suppression
   void NMS(std::vector<CPlate> &inVec, std::vector<CPlate> &resultVec, double overlap) {
     std::sort(inVec.begin(), inVec.end());
+    //*leijun 这里sort的是啥?  因为CPlate类重载了<, 标准就是mscore
     std::vector<CPlate>::iterator it = inVec.begin();
     for (; it != inVec.end(); ++it) {
       CPlate plateSrc = *it;
@@ -111,8 +115,11 @@ namespace easypr {
       for (; itc != inVec.end();) {
         CPlate plateComp = *itc;
         Rect rectComp = plateComp.getPlatePos().boundingRect();
+        //*leijun rotatedRect.boundingRect();
         float iou = computeIOU(rectSrc, rectComp);
+        //*leijun 计算IOU
         if (iou > overlap) {
+        //*leijun  当IOU大于某个值，就直接去除置信度小一点的那个
           itc = inVec.erase(itc);
         }
         else {
@@ -133,6 +140,7 @@ namespace easypr {
       CPlate plate = inVec[j];
       Mat inMat = plate.getPlateMat();
       int result = plateSetScore(plate);
+      //*leijun 是否是plate的置信度, 0为plate
       if (0 == result) {
         if (0) {
           imshow("inMat", inMat);

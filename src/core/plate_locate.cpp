@@ -135,6 +135,7 @@ int CPlateLocate::colorSearch(const Mat &src, const Color r, Mat &out,
 
 
   vector<vector<Point>> contours;
+  //contours:检测到的轮廓，每个轮廓都是以点向量的形式进行存储即使用point类型的vector表示
 
   findContours(src_threshold,
                contours,               // a vector of contours
@@ -447,6 +448,7 @@ int CPlateLocate::deskew(const Mat &src, const Mat &src_b,
     //
   Mat mat_debug;
   src.copyTo(mat_debug);
+  //
 
   for (size_t i = 0; i < inRects.size(); i++) {
     RotatedRect roi_rect = inRects[i];
@@ -912,7 +914,7 @@ int CPlateLocate::sobelOperT(const Mat &in, Mat &out, int blurSize, int morphW,
 }
 
 int CPlateLocate::plateSobelLocate(Mat src, vector<CPlate> &candPlates,
-                                   int index) {
+                                int index) {
   vector<RotatedRect> rects_sobel_all;
   rects_sobel_all.reserve(256);
 
@@ -966,7 +968,9 @@ int CPlateLocate::plateSobelLocate(Mat src, vector<CPlate> &candPlates,
 #pragma omp parallel for
   for (int i = 0; i < (int)bound_rects_part.size(); i++) {
     Rect_<float> bound_rect = bound_rects_part[i];
+    //Rect_ 矩形类 x, y, width, height
     Point2f refpoint(bound_rect.x, bound_rect.y);
+    //f表示float类型
 
     float x = bound_rect.x > 0 ? bound_rect.x : 0;
     float y = bound_rect.y > 0 ? bound_rect.y : 0;

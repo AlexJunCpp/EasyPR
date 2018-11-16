@@ -16,6 +16,7 @@ namespace easypr {
 
   int CPlateDetect::plateDetect(Mat src, std::vector<CPlate> &resultVec, int type,
     bool showDetectArea, int img_index) {
+      //*leijun type用来决定用哪种方式来选择plate定位, 这种思想可以好好借鉴下
     std::vector<CPlate> sobel_Plates;
     sobel_Plates.reserve(16);
     std::vector<CPlate> color_Plates;
@@ -29,6 +30,7 @@ namespace easypr {
 #pragma omp section
       {
         if (!type || type & PR_DETECT_SOBEL) {
+            //*leijun 这种写法可以好好借鉴下, 如果执行多个选择，可以使用这种方式
           m_plateLocate->plateSobelLocate(src, sobel_Plates, img_index);
         }
       }
@@ -46,6 +48,7 @@ namespace easypr {
       }
     }
     for (auto plate : sobel_Plates) {
+        //*leijun C++11
       plate.setPlateLocateType(SOBEL);
       all_result_Plates.push_back(plate);
     }

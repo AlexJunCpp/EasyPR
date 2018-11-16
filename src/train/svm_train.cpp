@@ -23,11 +23,14 @@ void SvmTrain::train() {
   svm_ = cv::ml::SVM::create();
   svm_->setType(cv::ml::SVM::C_SVC);
   svm_->setKernel(cv::ml::SVM::RBF);
+    //*leijun 选择的是高斯核函数
   svm_->setDegree(0.1);
   // 1.4 bug fix: old 1.4 ver gamma is 1
   svm_->setGamma(0.1); 
+    //*leijun 这个参数有用
   svm_->setCoef0(0.1);
   svm_->setC(1);
+    //*leijun 这个参数有用
   svm_->setNu(0.1);
   svm_->setP(0.1);
   svm_->setTermCriteria(cvTermCriteria(CV_TERMCRIT_ITER, 20000, 0.0001));
