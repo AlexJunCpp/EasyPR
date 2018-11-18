@@ -45,6 +45,16 @@ void CPlateLocate::setLifemode(bool param) {
   }
 }
 
+//对minAreaRect获得的最小外接矩形，用纵横比进行判断
+//　　中国车牌的一般大小是440mm*140mm，面积为440*140，宽高比为3.14。verifySizes使用如下方法判断矩形是否是车牌：
+//
+//　　1.设立一个偏差率error，根据这个偏差率计算最大和最小的宽高比rmax、rmin。判断矩形的r是否满足在rmax、rmin之间。
+//　　2.设定一个面积最大值max与面积最小值min。判断矩形的面积area是否满足在max与min之间。
+//
+//　　以上两个条件必须同时满足，任何一个不满足都代表这不是车牌。
+//
+//verifySizes方法是可选的。你也可以不进行verifySizes直接处理，但是这会大大加重后面的车牌判断的压力。一般来说，合理的verifySizes能够去除90%不合适的矩形。
+//
 bool CPlateLocate::verifySizes(RotatedRect mr) {
   float error = m_error;
   // Spain car plate size: 52x11 aspect 4,7272
@@ -139,10 +149,11 @@ int CPlateLocate::colorSearch(const Mat &src, const Color r, Mat &out,
 
   findContours(src_threshold,
                contours,               // a vector of contours
-               CV_RETR_EXTERNAL,
+               CV_RETR_EXTERNAL,     //提取外部轮廓
                CV_CHAIN_APPROX_NONE);  // all pixels of each contours
 
   vector<vector<Point>>::iterator itc = contours.begin();
+
   while (itc != contours.end()) {
     RotatedRect mr = minAreaRect(Mat(*itc));
 
@@ -195,6 +206,7 @@ int CPlateLocate::sobelFrtSearch(const Mat &src,
   while (itc != contours.end()) {
     RotatedRect mr = minAreaRect(Mat(*itc));
     //*leijun  最小外接矩形
+    //这里面需要注意的是这里用的矩形是RotatedRect，意思是可旋转的。因此我们得到的矩形不是水平的，这样就为处理倾斜的车牌打下了基础。
 
 
     if (verifySizes(mr)) {
@@ -332,11 +344,17 @@ int CPlateLocate::sobelOper(const Mat &in, Mat &out, int blurSize, int morphW,
   mat_blur = in.clone();
   GaussianBlur(in, mat_blur, Size(blurSize, blurSize), 0, 0, BORDER_DEFAULT);
   //*leijun  高斯模糊处理噪声，为后面灰度化后进行sobel算子提供有利条件
+  //Size中的数字影响车牌定位的效果。
+  //其中Size字段的参数指定了高斯模糊的半径。值是CPlateLocate类的m_GaussianBlurSize变量。由于opencv的高斯模糊仅接收奇数的半径，因此变量为偶数值会抛出异常。
+  //平均模糊的算法非常简单。每一个像素的值都取周围所有像素（共8个）的平均值,而高斯模糊带有相应的权值。
+  //如果不使用高斯模糊而直接用边缘检测算法，我们得到的候选“车牌”达到了8个！这样不仅会增加车牌判断的处理时间，还增加了判断出错的概率。
+  //在数次的实验以后，必须承认，保留高斯模糊过程与半径值为5是最佳的实践。为应对特殊需求，在CPlateLocate类中也应该提供了方法修改高斯半径的值，调用代码（假设需要一个为3的高斯模糊半径）setGaussianBlurSize
 
   Mat mat_gray;
   if (mat_blur.channels() == 3)
     cvtColor(mat_blur, mat_gray, CV_RGB2GRAY);
   //*leijun 灰度化，提高运算速度
+  //Sobel算子仅能对灰度图像有效果，不能将色彩图像作为输入。因此在进行Soble算子前必须进行前面的灰度化工作。
   else
     mat_gray = mat_blur;
 
@@ -350,6 +368,13 @@ int CPlateLocate::sobelOper(const Mat &in, Mat &out, int blurSize, int morphW,
 
   Sobel(mat_gray, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT);
   //*leijun  sobel算法
+  //在调用参数中有两个常量SOBEL_X_WEIGHT与SOBEL_Y_WEIGHT代表水平方向和垂直方向的权值，默认前者是1，后者是0，代表仅仅做水平方向求导，而不做垂直方向求导。
+  //为了计算方便，Soble算子并没有真正去求导，而是使用了周边值的加权和的方法，学术上称作“卷积”。
+  //Sobel算子求图像的一阶导数，Laplace算子则是求图像的二阶导数，在通常情况下，也能检测出边缘，不过Laplace算子的检测不分水平和垂直。
+  //水平边缘对于车牌的检测一般无利反而有害。
+  //
+  //
+  //
   convertScaleAbs(grad_x, abs_grad_x);
 
   Mat grad;
@@ -405,6 +430,7 @@ void deleteNotArea(Mat &inmat, Color color = UNKNOWN) {
 
     threshold(input_grey, img_threshold, threadHoldV, 255,
               CV_THRESH_BINARY_INV);
+    //因为中国的车牌有很多类型，最常见的是蓝牌和黄牌。其中蓝牌字符浅，背景深，黄牌则是字符深，背景浅，因此需要正二值化方法与反二值化两种方法来处理，其中正二值化处理蓝牌，反二值化处理黄牌。
 
     utils::imwrite("resources/image/tmp/inputgray2.jpg", img_threshold);
 
@@ -413,6 +439,8 @@ void deleteNotArea(Mat &inmat, Color color = UNKNOWN) {
   } else
     threshold(input_grey, img_threshold, 10, 255,
               CV_THRESH_OTSU + CV_THRESH_BINARY);
+  //*leijun
+  //阈值T应该取多少？由于不同图像的光造程度不同，导致作为二值化区分的阈值T也不一样。因此一个简单的做法是直接使用opencv的二值化函数时加上自适应阈值参数。
 
   //img_threshold = input_grey.clone();
   //spatial_ostu(img_threshold, 8, 2, plateType);
@@ -441,6 +469,28 @@ void deleteNotArea(Mat &inmat, Color color = UNKNOWN) {
 }
 
 
+//*
+//不再使用全图旋转，而是区域旋转。其实我们在获取定位区域后，我们并不需要定位区域以外的图像。
+//
+//　　倘若我们能划出一块小的区域包围定位区域，然后我们仅对定位区域进行旋转，那么计算量就会大幅度降低。而这点，在opencv里是可以实现的，我们对定位区域RotatedRect用boundingRect()方法获取外接矩形，再使用Mat(Rect
+//...)方法截取这个区域图块，从而生成一个小的区域图像。于是下面的所有旋转等操作都可以基于这个区域图像进行。
+//opencv提供了一个从图像中截取感兴趣区域ROI的方法，也就是Mat(Rect
+//...)。这个方法会在Rect所在的位置，截取原图中一个图块，然后将其赋值到一个新的Mat图像里。遗憾的是这个方法不支持RotataedRect，同时Rect与RotataedRect也没有继承关系。因此布不能直接调用这个方法。
+//
+//　　我们可以使用RotataedRect的boudingRect()方法。这个方法会返回一个RotataedRect的最小外接矩形，而且这个矩形是一个Rect。因此将这个Rect传递给Mat(Rect...)方法就可以截取出原图的ROI图块，并获得对应的ROI图像。
+//
+//　　需要注意的是，ROI图块和ROI图像的区别，当我们给定原图以及一个Rect时，原图中被Rect包围的区域称为ROI图块，此时图块里的坐标仍然是原图的坐标。当这个图块里的内容被拷贝到一个新的Mat里时，我们称这个新Mat为ROI图像。ROI图像里仅仅只包含原来图块里的内容，跟原图没有任何关系。所以图块和图像虽然显示的内容一样，但坐标系已经发生了改变。在从ROI图块到ROI图像以后，点的坐标要计算一个偏移量。
+//
+//
+//偏斜扭转全过程：
+//首先我们获取RotatedRect，然后对每个RotatedRect获取外界矩形，也就是ROI区域。外接矩形的计算有可能获得不安全的坐标，因此需要使用安全的获取外界矩形的函数。
+//获取安全外接矩形以后，在原图中截取这部分区域，并放置到一个新的Mat里，称之为ROI图像。这是本过程中第一次截取，使用Mat(Rect
+//...)函数。
+//接下来对ROI图像根据RotatedRect的角度展开旋转，旋转的过程中使用了放大化旋转法，以此防止车牌区域被截断。
+//旋转完以后，我们把已经转正的RotatedRect部分截取出来，称之为车牌区域。这是本过程中第二次截取，与第一次不同，这次截取使用getRectSubPix()方法。
+//接下里使用偏斜判断函数来判断车牌区域里的车牌是否是倾斜的。
+//如果是，则继续使用仿射变换函数wrapAffine来进行扭正处理，处理过程中要注意三个关键点的坐标。
+//最后使用resize函数将车牌区域统一化为EasyPR的车牌大小
 int CPlateLocate::deskew(const Mat &src, const Mat &src_b,
                          vector<RotatedRect> &inRects,
                          vector<CPlate> &outPlates, bool useDeteleArea, Color color) {
@@ -477,7 +527,10 @@ int CPlateLocate::deskew(const Mat &src, const Mat &src_b,
     // m_angle=60
     if (roi_angle - m_angle < 0 && roi_angle + m_angle > 0) {
       Rect_<float> safeBoundRect;
+      //Rect_类有些意思，成员变量x、y、width、height，分别为左上角点的坐标和矩形的宽和高。常用的成员函数有Size()返回值为一个Size，area()返回矩形的面积，contains(Point)用来判断点是否在矩形内，inside(Rect)函数判断矩形是否在该矩形内，tl()返回左上角点坐标，br()返回右下角点坐标。
+      //
       bool isFormRect = calcSafeRect(roi_rect, src, safeBoundRect);
+      //这里获取roi
       if (!isFormRect) continue;
 
       Mat bound_mat = src(safeBoundRect);
@@ -500,12 +553,16 @@ int CPlateLocate::deskew(const Mat &src, const Mat &src_b,
         Mat rotated_mat;
         Mat rotated_mat_b;
 
+                        // 角度在5到60度之间的，首先需要旋转 rotation
+                        //
         if (!rotation(bound_mat, rotated_mat, roi_rect_size, roi_ref_center, roi_angle))
           continue;
 
         if (!rotation(bound_mat_b, rotated_mat_b, roi_rect_size, roi_ref_center, roi_angle))
             //*leijun  rotation()函数主要用于对倾斜的图片进行旋转
           continue;
+                        // 如果图片偏斜，还需要视角转换 affine
+                        //
 
         // we need affine for rotatioed image
         double roi_slope = 0;
@@ -514,6 +571,8 @@ int CPlateLocate::deskew(const Mat &src, const Mat &src_b,
         if (isdeflection(rotated_mat_b, roi_angle, roi_slope)) {
             //*leijun 函数 isdeflection()
             //的主要功能是判断车牌偏斜的程度，并且计算偏斜的值
+            ////! 输入二值化图像，输出判断结果
+            //
           affine(rotated_mat, deskew_mat, roi_slope);
           //*leijun 偏斜校正
         } else
@@ -547,6 +606,8 @@ int CPlateLocate::deskew(const Mat &src, const Mat &src_b,
 }
 
 
+//旋转操作是为后面的车牌判断与字符识别提高成功率的关键环节。
+//
 bool CPlateLocate::rotation(Mat &in, Mat &out, const Size rect_size,
                             const Point2f center, const double angle) {
   if (0) {
@@ -556,7 +617,10 @@ bool CPlateLocate::rotation(Mat &in, Mat &out, const Size rect_size,
   }
 
   Mat in_large;
+  
   in_large.create(int(in.rows * 1.5), int(in.cols * 1.5), in.type());
+  //*leijun
+  //首先新建一个尺寸为原始图像1.5倍的新图像，接着把原始图像映射到新图像上，于是我们得到了一个显示区域(视框)扩大化后的原始图像。显示区域扩大以后，那些在原图像中没有值的像素被置了一个初值。
 
   float x = in_large.cols / 2 - center.x > 0 ? in_large.cols / 2 - center.x : 0;
   float y = in_large.rows / 2 - center.y > 0 ? in_large.rows / 2 - center.y : 0;
@@ -657,6 +721,8 @@ bool CPlateLocate::isdeflection(const Mat &in, const double angle,
   double g = tan(angle * PI / 180.0);
 
   if (maxlen - len[1] > nCols / 32 || len[1] - minlen > nCols / 32) {
+      //        // 如果斜率为正，则底部在下，反之在上
+      //
 
     double slope_can_1 =
         double(len[2] - len[0]) / double(comp_index[1]);
@@ -903,8 +969,14 @@ int CPlateLocate::sobelOperT(const Mat &in, Mat &out, int blurSize, int morphW,
   utils::imwrite("resources/image/tmp/grayBINARY.jpg", mat_threshold);
 
   Mat element = getStructuringElement(MORPH_RECT, Size(morphW, morphH));
+  //在opencv中，调用闭操作的方法是首先建立矩形模板，矩形的大小是可以设置的，由于矩形是用来覆盖以中心像素的所有其他像素，因此矩形的宽和高最好是奇数。
+  //在这里，我们使用了类成员变量，这两个类成员变量在构造函数中被赋予了初始值。宽是17，高是3.
   morphologyEx(mat_threshold, mat_threshold, MORPH_CLOSE, element);
   //*leijun 形态学闭操作
+  //闭操作就是对图像先膨胀，再腐蚀。闭操作的结果一般是可以将许多靠近的图块相连称为一个无突起的连通域。在我们的图像定位中，使用了闭操作去连接所有的字符小图块，然后形成一个车牌的大致轮廓。
+  //这里需要注意的是，矩形模板的宽度，17是个推荐值，低于17都不推荐。
+  //　　为什么这么说，因为有一个”断节“的问题。中国车牌有一个特点，就是表示城市的字母与右边相邻的字符距离远大于其他相邻字符之间的距离。如果你设置的不够大，结果导致左边的字符与右边的字符中间断开了
+  //宽度过大也是不好的，因为它会导致闭操作连接不该连接的部分
 
   utils::imwrite("resources/image/tmp/phologyEx.jpg", mat_threshold);
 

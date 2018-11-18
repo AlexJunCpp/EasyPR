@@ -20,6 +20,7 @@ int CPlateRecognize::plateRecognize(const Mat& src, std::vector<CPlate> &plateVe
   // 1. plate detect
   std::vector<CPlate> plateVec;
   int resultPD = plateDetect(img, plateVec, img_index);
+  //*leijun 返回值为0的话就是函数调用成功
   if (resultPD == 0) {
     size_t num = plateVec.size();
     for (size_t j = 0; j < num; j++) {

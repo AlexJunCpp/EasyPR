@@ -7,6 +7,7 @@ namespace easypr {
     //*leijun 命名空间声明和实现可以分离
 
   PlateJudge* PlateJudge::instance_ = nullptr;
+  //*leijun 单例模式
 
   PlateJudge* PlateJudge::instance() {
     if (!instance_) {
@@ -19,6 +20,8 @@ namespace easypr {
     bool useLBP = false;
     if (useLBP) {
       LOAD_SVM_MODEL(svm_, kLBPSvmPath);
+      //*leijun
+      //CvSVM类有个方法，把训练好的结果以xml文件的形式存储，我就是把这个xml文件随EasyPR发布，并让程序在执行前先加载好这个xml。这个xml的位置就是在文件夹Model下面--svm.xml文件。
       extractFeature = getLBPFeatures;
       //*leijun 获得rois的LBP特征
     }
@@ -43,6 +46,18 @@ namespace easypr {
     extractFeature(plate.getPlateMat(), features);
     //*leijun  获取特征·
     float score = svm_->predict(features, noArray(), cv::ml::StatModel::Flags::RAW_OUTPUT);
+    //*leijun 第二个默认参数为输出的Array,默认为空，第三个参数为flag，
+    //RAW_OUTPUT    
+    //makes the method return the raw results (the sum), not the class label·
+    //
+    //
+    //svm的perdict方法的输入是待预测数据的特征，也称之为features。在这里，我们输入的特征是图像全部的像素。由于svm要求输入的特征应该是一个向量，而Mat是与图像宽高对应的矩阵，因此在输入前我们需要使用reshape(1,1)方法把矩阵拉伸成向量。除了全部像素以外，也可以有其他的特征，具体看第三部分“SVM调优”。
+    //
+    //　　predict方法的输出是float型的值，我们需要把它转变为int型后再进行判断。如果是1代表就是车牌，否则不是。这个"1"的取值是由你在训练时输入的标签决定的。标签，又称之为label，代表某个数据的分类。如果你给SVM模型输入一个车牌，并告诉它，这个图片的标签是5。那么你这边判断时所用的值就应该是5。
+    //
+    //
+    //
+
     //std::cout << "score:" << score << std::endl;
     if (0) {
       imshow("plate", plate.getPlateMat());

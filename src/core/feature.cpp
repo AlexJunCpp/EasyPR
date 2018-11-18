@@ -31,6 +31,7 @@ Mat getHistogram(Mat in) {
   return out;
 }
 
+//在rbf核介绍时提到过，输入数据的特征的维度现在是172，那么这个数字是如何计算出来的？现在的特征用的是直方统计函数，也就是先把图像二值化，然后统计图像中一行元素中1的数目，由于输入图像有36行，因此有36个值，再统计图像中每一列中1的数目，图像有136列，因此有136个值，两者相加正好等于172。
 void getHistogramFeatures(const Mat& image, Mat& features) {
   Mat grayImage;
   cvtColor(image, grayImage, CV_RGB2GRAY);

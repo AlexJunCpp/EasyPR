@@ -12,8 +12,8 @@ set(CMAKE_CXX_COMPILER_ID "AppleClang")
 set(CMAKE_CXX_TARGET_INCLUDE_PATH
   "../."
   "../include"
-  "/anaconda3/pkgs/opencv-3.3.1-py36h60a5f38_1/include"
-  "/anaconda3/pkgs/opencv-3.3.1-py36h60a5f38_1/include/opencv"
+  "/anaconda3/include"
+  "/anaconda3/include/opencv"
   )
 
 # Targets to which this target links.

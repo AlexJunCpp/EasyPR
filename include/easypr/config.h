@@ -1,7 +1,8 @@
 #ifndef EASYPR_CONFIG_H_
 #define EASYPR_CONFIG_H_
 
-#define CV_VERSION_THREE_ZERO
+//#define CV_VERSION_THREE_ZERO
+#define CV_VERSION_THREE_TWO
 
 namespace easypr {
 

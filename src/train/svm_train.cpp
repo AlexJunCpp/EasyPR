@@ -19,18 +19,23 @@ SvmTrain::SvmTrain(const char* plates_folder, const char* xml)
   extractFeature = getHistomPlusColoFeatures;
 }
 
+//*leijun
+//　　这个原因在于：EasyPR1.0使用的是liner核，也称之为线型核，因此degree和gamma还有coef0三个参数没有作用。同时，在这里SVM模型用作的问题是分类问题，那么nu和p两个参数也没有影响。最后唯一能影响的参数只有Cvalue。到了EasyPR1.1版本以后，默认使用的是RBF核，因此需要调整的参数多了一个gamma。
 void SvmTrain::train() {
   svm_ = cv::ml::SVM::create();
   svm_->setType(cv::ml::SVM::C_SVC);
+  //*leijun C_SVC为一个二分类函数
   svm_->setKernel(cv::ml::SVM::RBF);
     //*leijun 选择的是高斯核函数
   svm_->setDegree(0.1);
   // 1.4 bug fix: old 1.4 ver gamma is 1
   svm_->setGamma(0.1); 
     //*leijun 这个参数有用
+
   svm_->setCoef0(0.1);
   svm_->setC(1);
     //*leijun 这个参数有用
+
   svm_->setNu(0.1);
   svm_->setP(0.1);
   svm_->setTermCriteria(cvTermCriteria(CV_TERMCRIT_ITER, 20000, 0.0001));
@@ -51,12 +56,17 @@ void SvmTrain::train() {
                   SVM::getDefaultGrid(SVM::GAMMA), SVM::getDefaultGrid(SVM::P),
                   SVM::getDefaultGrid(SVM::NU), SVM::getDefaultGrid(SVM::COEF),
                   SVM::getDefaultGrid(SVM::DEGREE), true);
+  //*leijun
+  //trainAuto能自动调整参数,比train要慢些，不过效果要好些，也得先初始化一个参数
+  //10为K_fold, true表示为二分类
+
   //svm_->train(train_data);
 
   long end = utils::getTimestamp();
   fprintf(stdout, ">> Training done. Time elapse: %ldms\n", end - start);
   fprintf(stdout, ">> Saving model file...\n");
   svm_->save(svm_xml_);
+  //*leijun 保存到咱传进来的xml文件中
 
   fprintf(stdout, ">> Your SVM Model was saved to %s\n", svm_xml_);
   fprintf(stdout, ">> Testing...\n");

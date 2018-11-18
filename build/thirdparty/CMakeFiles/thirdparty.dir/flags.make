@@ -6,5 +6,5 @@ CXX_FLAGS =   -std=gnu++11
 
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I/Users/junlei/Documents/GitHub/EasyPR/. -I/Users/junlei/Documents/GitHub/EasyPR/include -I/anaconda3/pkgs/opencv-3.3.1-py36h60a5f38_1/include -I/anaconda3/pkgs/opencv-3.3.1-py36h60a5f38_1/include/opencv 
+CXX_INCLUDES = -I/Users/junlei/Documents/GitHub/EasyPR/. -I/Users/junlei/Documents/GitHub/EasyPR/include -I/anaconda3/include -I/anaconda3/include/opencv 
 

@@ -1027,6 +1027,8 @@ Rect CCharsSegment::GetChineseRect(const Rect rectSpe) {
   return a;
 }
 
+////! 找出指示城市的字符的Rect，例如苏A7003X，就是"A"的位置
+//
 int CCharsSegment::GetSpecificRect(const vector<Rect>& vecRect) {
   vector<int> xpositions;
   int maxHeight = 0;
@@ -1048,6 +1050,8 @@ int CCharsSegment::GetSpecificRect(const vector<Rect>& vecRect) {
     Rect mr = vecRect[i];
     int midx = mr.x + mr.width / 2;
 
+    //    //如果一个字符有一定的大小，并且在整个车牌的1/7到2/7之间，则是我们要找的特殊字符
+    //        //当前字符和下个字符的距离在一定的范围内
     // use prior knowledage to find the specific character
     // position in 1/7 and 2/7
     if ((mr.width > maxWidth * 0.6 || mr.height > maxHeight * 0.6) &&

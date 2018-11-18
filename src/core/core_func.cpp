@@ -6,9 +6,30 @@
 #include "thirdparty/mser/mser2.hpp"
 #include <ctime>
 
+
+//下面就是一个颜色定位的完整过程。
+//
+//　　第一步，将图像的颜色空间从RGB转为HSV，在这里由于光照的影响，对于图像使用直方图均衡进行预处理；
+//
+//　　第二步，依次遍历图像的所有像素，当H值落在200-280之间并且S值与V值也落在0.35-1.0之间，标记为白色像素，否则为黑色像素；
+//
+//　　第三步，对仅有白黑两个颜色的二值图参照原先车牌定位中的方法，使用闭操作，取轮廓等方法将车牌的外接矩形截取出来做进一步的处理。
+//
+//
+//
+//
+//   //! 根据一幅图像与颜色模板获取对应的二值图
+//       //! 输入RGB图像, 颜色模板（蓝色、黄色）
+//           //! 输出灰度图（只有0和255两个值，255代表匹配，0代表不匹配）
 namespace easypr {
   Mat colorMatch(const Mat &src, Mat &match, const Color r,
     const bool adaptive_minsv) {
+
+      //       // S和V的最小值由adaptive_minsv这个bool值判断
+      //               // 如果为true，则最小值取决于H值，按比例衰减
+      //                       //
+      //                       如果为false，则不再自适应，使用固定的最小值minabs_sv
+      //                               // 默认为false
 
     // if use adaptive_minsv
     // min value of s and v is adaptive to h
@@ -2266,6 +2287,18 @@ void clearBorder(const Mat &img, Rect& cropRect) {
                     Rect_<float> &safeBoundRect) {
     Rect_<float> boudRect = roi_rect.boundingRect();
 
+    //如果要使用区域旋转，首先我们必须从原图中截取出一个包含定位区域的图块。
+    //
+    //　　opencv提供了一个从图像中截取感兴趣区域ROI的方法，也就是Mat(Rect
+    //...)。这个方法会在Rect所在的位置，截取原图中一个图块，然后将其赋值到一个新的Mat图像里。遗憾的是这个方法不支持RotataedRect，同时Rect与RotataedRect也没有继承关系。因此布不能直接调用这个方法。
+    //
+    //　　我们可以使用RotataedRect的boudingRect()方法。这个方法会返回一个RotataedRect的最小外接矩形，而且这个矩形是一个Rect。因此将这个Rect传递给Mat(Rect...)方法就可以截取出原图的ROI图块，并获得对应的ROI图像。
+    //
+    //
+    //实现一个安全的计算最小外接矩形Rect的函数，在boundingRect()结果之上，对角点坐标进行一次判断，如果值为负数，就置为0，如果值超过了原始Mat的rows或cols，就置为原始Mat的这些rows或cols。
+
+        // boudRect的左上的x和y有可能小于0
+        //
     float tl_x = boudRect.x > 0 ? boudRect.x : 0;
     float tl_y = boudRect.y > 0 ? boudRect.y : 0;
 
