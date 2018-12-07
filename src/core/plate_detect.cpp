@@ -7,6 +7,7 @@ namespace easypr {
 
   CPlateDetect::CPlateDetect() {
     m_plateLocate = new CPlateLocate();
+    //?为什么这里还要加括号？好像加不加括号都没有大影响
     m_maxPlates = 3;
     m_type = 0;
     m_showDetect = false;
