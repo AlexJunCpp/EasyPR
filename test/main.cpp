@@ -117,6 +117,7 @@ int trainChineseMain() {
 
 int testMain() {
   std::shared_ptr<easypr::Kv> kv(new easypr::Kv);
+
   kv->load("resources/text/chinese_mapping");
 
   bool isExit = false;
@@ -167,6 +168,7 @@ int testMain() {
           break;
         default:
           std::cout << kv->get("input_error") << ":";
+          //*leijun 返回一个中文“输入有误”之类的
           isRepeat = true;
           break;
       }

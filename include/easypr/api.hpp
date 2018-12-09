@@ -3,6 +3,7 @@
  */
 #ifndef EASYPR_API_HPP
 #define EASYPR_API_HPP
+//*leijun  这个名字就是随意起的
 
 #include <string>
 #include <vector>
@@ -61,12 +62,14 @@ static std::vector<std::string> plate_recognize(const char* image,
   if (plates.size() == 1) {
     if (1) {
       std::stringstream ss(std::stringstream::in | std::stringstream::out);
+      //*leijun stringstream类型安全，不会溢出
       ss << "result.jpg";
       imwrite(ss.str(), plates.at(0).getPlateMat());
     }
   }
 
   return std::move(results);
+  //*leijun 移动构造函数？减少拷贝的次数？
 }
 
 static Color get_plate_color(const char* image) {

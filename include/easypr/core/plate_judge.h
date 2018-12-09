@@ -9,6 +9,7 @@ namespace easypr {
 class PlateJudge {
  public:
   static PlateJudge* instance();
+  
   void LoadModel(std::string path);
 
   int plateJudgeUsingNMS(const std::vector<CPlate>&, std::vector<CPlate>&, int maxPlates = 5);

@@ -10,8 +10,8 @@ void Kv::load(const std::string &file) {
   std::ifstream reader(file);
   assert(reader);
 
-  if (reader.is_open()) {
-    while (!reader.eof()) {
+  if (reader.is_open()) { 
+      while (!reader.eof()) {
       std::string line;
       std::getline(reader, line);
       if (line.empty()) continue;
@@ -35,6 +35,7 @@ void Kv::load(const std::string &file) {
         }
         return std::make_pair(key, value);
       };
+      //*leijun 上面是一个函数实现，parse每一行的key和value
 
       auto kv = parse(line);
       this->add(kv.first, kv.second);
@@ -59,6 +60,7 @@ void Kv::add(const std::string &key, const std::string &value) {
             value.c_str());
   } else {
     std::string v(value);
+    //?leijun 这里为什么还要有个缓存变量？
 #ifdef OS_WINDOWS
     v = utils::utf8_to_gbk(value.c_str());
 #endif

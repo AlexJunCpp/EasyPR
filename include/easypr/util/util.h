@@ -84,6 +84,7 @@ class Utils {
   static void print_file_lines(const std::string &file) {
     std::ifstream fs(file);
     if (fs.good()) {
+        //*leijun  测试流是否完好？
       while (!fs.eof()) {
         std::string line;
         std::getline(fs, line);
